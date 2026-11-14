@@ -37,9 +37,9 @@ class HomeActivity : AppCompatActivity() {
   override fun onBackPressed() { if (folder != null) { folder = null; render() } else super.onBackPressed() }
 
   private fun load() {
-    all.clear(); val M = MediaStore.Video.Media
-    contentResolver.query(M.EXTERNAL_CONTENT_URI, arrayOf(M._ID, M.DISPLAY_NAME, M.DURATION, M.SIZE, M.BUCKET_DISPLAY_NAME), null, null, "${M.DATE_ADDED} DESC")?.use {
-      while (it.moveToNext()) all += V(ContentUris.withAppendedId(M.EXTERNAL_CONTENT_URI, it.getLong(0)), it.getString(1) ?: "video", it.getLong(2), it.getLong(3), it.getString(4) ?: "Internal storage") }
+    all.clear();
+    contentResolver.query(MediaStore.Video.Media.EXTERNAL_CONTENT_URI, arrayOf(MediaStore.Video.Media._ID, MediaStore.Video.Media.DISPLAY_NAME, MediaStore.Video.Media.DURATION, MediaStore.Video.Media.SIZE, MediaStore.Video.Media.BUCKET_DISPLAY_NAME), null, null, "${MediaStore.Video.Media.DATE_ADDED} DESC")?.use {
+      while (it.moveToNext()) all += V(ContentUris.withAppendedId(MediaStore.Video.Media.EXTERNAL_CONTENT_URI, it.getLong(0)), it.getString(1) ?: "video", it.getLong(2), it.getLong(3), it.getString(4) ?: "Internal storage") }
     findViewById<TextView>(R.id.count).text = "${all.size} videos on this device"; render()
   }
   private fun open(list: List<V>, i: Int) {
