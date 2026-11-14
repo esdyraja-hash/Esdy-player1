@@ -1,0 +1,1 @@
+<resources><style name="Ib" parent="Widget.AppCompat.Button.Borderless"><item name="android:textColor">#FFFFFF</item><item name="android:textSize">20sp</item><item name="android:minWidth">48dp</item></style></resources>

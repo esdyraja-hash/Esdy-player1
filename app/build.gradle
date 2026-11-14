@@ -1,0 +1,12 @@
+plugins { id 'com.android.application'; id 'org.jetbrains.kotlin.android' }
+android {
+  namespace 'com.esdy.hqmediaplayer'; compileSdk 34
+  defaultConfig { applicationId 'com.esdy.hqmediaplayer'; minSdk 23; targetSdk 34; versionCode 1; versionName '3.0'
+    ndk { abiFilters 'arm64-v8a', 'armeabi-v7a' } }
+  compileOptions { sourceCompatibility JavaVersion.VERSION_17; targetCompatibility JavaVersion.VERSION_17 }
+  kotlinOptions { jvmTarget = '17' }
+}
+dependencies {
+  implementation 'org.videolan.android:libvlc-all:3.6.0'
+  implementation 'androidx.appcompat:appcompat:1.7.0'
+}
