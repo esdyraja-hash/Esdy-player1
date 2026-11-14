@@ -27,12 +27,12 @@ class DeckView(c: Context) : View(c) {
   private fun cassette(cv: Canvas) {
     val w = width.toFloat(); val h = height.toFloat(); val cx = w / 2; val bw = w * 0.9f; val bh = bw * 0.64f; val l = (w - bw) / 2; val t = (h - bh) / 2; p.style = Paint.Style.FILL
     p.color = 0xFF202228.toInt(); cv.drawRoundRect(RectF(l, t, l + bw, t + bh), bw * 0.04f, bw * 0.04f, p)
-    p.color = 0xFF3B4150.toInt(); cv.drawRoundRect(RectF(l + bw * 0.06f, t + bh * 0.1f, l + bw * 0.94f, t + bh * 0.64f), 14f, 14f, p)
+    p.color = 0xFF3B4150.toInt(); cv.drawRoundRect(RectF(l + bw * 0.06f, t + bh * 0.1f, l + bw * 0.94f, t + bh * 0.7f), 14f, 14f, p)
     p.color = 0xFFC9CED8.toInt(); cv.drawRect(l + bw * 0.06f, t + bh * 0.1f, l + bw * 0.94f, t + bh * 0.14f, p)
-    p.color = -1; p.textAlign = Paint.Align.CENTER; p.textSize = bw * 0.055f; p.typeface = Typeface.create(Typeface.SERIF, Typeface.ITALIC); cv.drawText(artist.take(24), cx, t + bh * 0.3f, p)
-    val wy = t + bh * 0.46f; p.color = 0xFF111317.toInt(); cv.drawRoundRect(RectF(cx - bw * 0.34f, wy - bw * 0.1f, cx + bw * 0.34f, wy + bw * 0.1f), bw * 0.1f, bw * 0.1f, p)
+    p.color = -1; p.textAlign = Paint.Align.CENTER; p.textSize = bw * 0.055f; p.typeface = Typeface.create(Typeface.SERIF, Typeface.ITALIC); cv.drawText(artist.take(24), cx, t + bh * 0.25f, p)
+    val wy = t + bh * 0.5f; p.color = 0xFF111317.toInt(); cv.drawRoundRect(RectF(cx - bw * 0.34f, wy - bw * 0.1f, cx + bw * 0.34f, wy + bw * 0.1f), bw * 0.1f, bw * 0.1f, p)
     for (k in intArrayOf(-1, 1)) reel(cv, cx + k * bw * 0.2f, wy, bw * 0.085f, if (k < 0) angle else -angle)
-    p.style = Paint.Style.FILL; p.color = 0xFF17181C.toInt(); cv.drawRect(l + bw * 0.18f, t + bh * 0.72f, l + bw * 0.82f, t + bh, p)
+    p.style = Paint.Style.FILL; p.color = 0xFF17181C.toInt(); cv.drawRect(l + bw * 0.18f, t + bh * 0.76f, l + bw * 0.82f, t + bh, p)
     p.color = 0xFF8A8D94.toInt(); for (sx in floatArrayOf(0.04f, 0.96f)) for (sy in floatArrayOf(0.06f, 0.94f)) cv.drawCircle(l + bw * sx, t + bh * sy, bw * 0.014f, p)
   }
   private fun reel(cv: Canvas, x: Float, y: Float, r: Float, a: Float) {
