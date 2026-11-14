@@ -44,6 +44,7 @@ class PlayerActivity : AppCompatActivity() {
     super.onCreate(b); window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)   // screen stays awake while playing
     setContentView(R.layout.activity_player); requestedOrientation = orients[0]; immersive()
     am = getSystemService(AUDIO_SERVICE) as AudioManager
+    MusicService.instance?.pause()
     vlc = findViewById(R.id.vlc); hud = findViewById(R.id.hud); seek = findViewById(R.id.seek); top = findViewById(R.id.top); bottom = findViewById(R.id.bottom)
     qa = findViewById(R.id.qa); night = findViewById(R.id.night); panelHost = findViewById(R.id.panelHost); panel = findViewById(R.id.panel)
     bPlay = findViewById(R.id.bPlay); bDec = findViewById(R.id.bDec); bUnlock = findViewById(R.id.bUnlock)
@@ -71,7 +72,7 @@ class PlayerActivity : AppCompatActivity() {
 
   // ---------- loading / decoding
   private fun load(i: Int) {
-    idx = i; val u = Uri.parse(uris[i]); findViewById<TextView>(R.id.title).text = names.getOrElse(i) { "" }
+    idx = i; prefs.edit().putString("last", uris[i]).apply(); val u = Uri.parse(uris[i]); findViewById<TextView>(R.id.title).text = names.getOrElse(i) { "" }
     try { pfd?.close() } catch (_: Exception) {}; pfd = null
     val m = if (u.scheme == "content") { pfd = contentResolver.openFileDescriptor(u, "r"); Media(lib, pfd!!.fileDescriptor) } else Media(lib, u)
     when (hw) { 0 -> m.setHWDecoderEnabled(true, false); 1 -> m.setHWDecoderEnabled(true, true); else -> m.setHWDecoderEnabled(false, false) }
@@ -166,7 +167,11 @@ class PlayerActivity : AppCompatActivity() {
     h.removeCallbacks(sleepRun); sleepOn = false; sleepEnd = w == 5; if (w in 1..4) { sleepOn = true; h.postDelayed(sleepRun, intArrayOf(0, 15, 30, 60, 90)[w] * 60000L) }; renderQA() }.show() }
   private val sleepRun = Runnable { mp.pause(); sleepOn = false; renderQA() }
   private fun custP() { val all = qaList(); val on = (prefs.getStringSet("qa", null) ?: all.map { it.id }.filter { it != "mir" }.toSet()).toMutableSet()
-    openPanel("Shortcuts") { all.forEach { q -> check(q.label, q.id in on) { c -> if (c) on += q.id else on -= q.id; prefs.edit().putStringSet("qa", HashSet(on)).apply(); renderQA() } } } }
+    openPanel("Shortcuts") { val g = GridLayout(this@PlayerActivity).apply { columnCount = 2 }
+      all.forEach { q -> g.addView(CheckBox(this@PlayerActivity).apply { text = q.label; isChecked = q.id in on; textSize = 14f; setTextColor(-1)
+        layoutParams = GridLayout.LayoutParams().apply { width = 0; columnSpec = GridLayout.spec(GridLayout.UNDEFINED, 1f) }
+        setOnCheckedChangeListener { _, c -> if (c) on += q.id else on -= q.id; prefs.edit().putStringSet("qa", HashSet(on)).apply(); renderQA() } }) }
+      addView(g) } }
   private fun moreP() { openPanel("More") {
     item("☰▶  Playing Queue") { queueP() }; item("▣  Aspect Ratio: ${scaleNames[aspI]}") { aspI = (aspI + 1) % scales.size; mp.videoScale = scales[aspI]; moreP() }
     item("🔖  Bookmark") { bmP() }; item("☰  Information") { infoP() }; item("➦  Share") { share() }
