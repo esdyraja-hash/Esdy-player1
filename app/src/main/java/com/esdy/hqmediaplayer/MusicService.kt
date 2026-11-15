@@ -24,7 +24,7 @@ class MusicService : Service() {
   }
   private lateinit var lib: LibVLC; private lateinit var mp: MediaPlayer; private var pfd: ParcelFileDescriptor? = null; private val h = Handler(Looper.getMainLooper())
   var uris = listOf<String>(); var names = listOf<String>(); var artists = listOf<String>(); var idx = 0
-  var shuffle = false; var loop = 0; var abA = -1L; private var abB = -1L; private var eq: MediaPlayer.Equalizer? = null
+  var eqIdx = -1; var shuffle = false; var loop = 0; var abA = -1L; private var abB = -1L; private var eq: MediaPlayer.Equalizer? = null
   val hasMedia: Boolean get() = uris.isNotEmpty()
   val title: String get() = names.getOrElse(idx) { "" }
   val artist: String get() = artists.getOrElse(idx) { "" }
@@ -61,7 +61,7 @@ class MusicService : Service() {
   fun jump(i: Int) { load(i); refresh() }
   fun seekTo(ms: Long) { mp.time = ms }
   fun abTap() { if (abA < 0) abA = mp.time else if (abB < 0) abB = mp.time else { abA = -1; abB = -1 } }
-  fun setEq(preset: Int) { try { if (preset < 0) mp.setEqualizer(null) else { eq = MediaPlayer.Equalizer.createFromPreset(preset); mp.setEqualizer(eq) } } catch (_: Throwable) {} }
+  fun setEq(preset: Int) { eqIdx = preset; try { if (preset < 0) mp.setEqualizer(null) else { eq = MediaPlayer.Equalizer.createFromPreset(preset); mp.setEqualizer(eq) } } catch (_: Throwable) {} }
   fun sleep(min: Int) { h.removeCallbacks(sleepRun); if (min > 0) h.postDelayed(sleepRun, min * 60000L) }
   private val sleepRun = Runnable { mp.pause(); refresh() }
   fun stopAll() { @Suppress("DEPRECATION") stopForeground(true); stopSelf() }

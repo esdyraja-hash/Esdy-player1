@@ -28,18 +28,21 @@ private val OUT_N = listOf("None", "Thin", "Normal", "Thick"); private val OUT_V
 private val BG_N = listOf("None", "Semi-transparent", "Solid"); private val BG_V = listOf(0, 128, 255)
 private val POS_N = listOf("Bottom", "Slightly higher", "Higher"); private val POS_V = listOf(0, 40, 90)
 
+private val ICONS = mapOf("night" to R.drawable.ic_moon, "cust" to R.drawable.ic_edit, "shuf" to R.drawable.ic_shuffle, "loop" to R.drawable.ic_repeat, "mute" to R.drawable.ic_mute, "sleep" to R.drawable.ic_timer, "afx" to R.drawable.ic_wave, "eq" to R.drawable.ic_tune, "shot" to R.drawable.ic_camera, "bg" to R.drawable.ic_headset, "rot" to R.drawable.ic_rotate, "mir" to R.drawable.ic_flip)
+
 class PlayerActivity : AppCompatActivity() {
+  private fun dp(x: Int) = (x * resources.displayMetrics.density).toInt()
   private class QA(val id: String, val icon: String, val label: String, val act: () -> Unit, val on: () -> Boolean = { false })
   private lateinit var lib: LibVLC; private lateinit var mp: MediaPlayer; private lateinit var am: AudioManager
   private lateinit var vlc: VLCVideoLayout; private lateinit var hud: TextView; private lateinit var seek: SeekBar
   private lateinit var top: View; private lateinit var bottom: View; private lateinit var qa: LinearLayout; private lateinit var night: View
-  private lateinit var panelHost: View; private lateinit var panel: LinearLayout; private lateinit var bPlay: Button; private lateinit var bDec: Button; private lateinit var bUnlock: View
+  private lateinit var panelHost: View; private lateinit var panel: LinearLayout; private lateinit var bPlay: ImageButton; private lateinit var bDec: Button; private lateinit var bUnlock: View
   private val h = Handler(Looper.getMainLooper()); private val prefs by lazy { getSharedPreferences("esdy", 0) }
   private var uris = listOf<String>(); private var names = listOf<String>(); private var idx = 0; private var pfd: ParcelFileDescriptor? = null
   private var hw = 0; private var locked = false; private var uiOn = true; private var loopMode = 0; private var shuffle = false; private var muted = false
   private var bg = false; private var mirror = false; private var nightOn = false; private var abA = -1L; private var abB = -1L; private var sleepOn = false; private var sleepEnd = false
   private var rotI = 0; private var aspI = 0; private var speed = 1f; private var boost = 100; private var zoom = 1f
-  private var eq: MediaPlayer.Equalizer? = null; private var eqOn = false
+  private var eq: MediaPlayer.Equalizer? = null; private var eqOn = false; private var eqPreset = -1
   private val scales = arrayOf(MediaPlayer.ScaleType.SURFACE_BEST_FIT, MediaPlayer.ScaleType.SURFACE_FIT_SCREEN, MediaPlayer.ScaleType.SURFACE_FILL, MediaPlayer.ScaleType.SURFACE_16_9, MediaPlayer.ScaleType.SURFACE_4_3, MediaPlayer.ScaleType.SURFACE_ORIGINAL)
   private val scaleNames = listOf("Best fit", "Crop", "Stretch", "16:9", "4:3", "Original")
   private val orients = intArrayOf(ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE, ActivityInfo.SCREEN_ORIENTATION_SENSOR_PORTRAIT, ActivityInfo.SCREEN_ORIENTATION_FULL_SENSOR)
@@ -117,7 +120,7 @@ class PlayerActivity : AppCompatActivity() {
   private fun tick() {
     if (mp.length > 0) { seek.progress = (mp.time * 1000 / mp.length).toInt(); findViewById<TextView>(R.id.tCur).text = fmt(mp.time); findViewById<TextView>(R.id.tDur).text = fmt(mp.length) }
     if (abA >= 0 && abB >= 0 && mp.time >= abB) mp.time = abA
-    bPlay.text = if (mp.isPlaying) "❚❚" else "▶"; h.postDelayed({ tick() }, 400)
+    bPlay.setImageResource(if (mp.isPlaying) R.drawable.ic_pause else R.drawable.ic_play); h.postDelayed({ tick() }, 400)
   }
 
   // ---------- gestures
@@ -157,7 +160,7 @@ class PlayerActivity : AppCompatActivity() {
   private fun renderQA() { qa.removeAllViews(); val on = prefs.getStringSet("qa", null) ?: qaList().map { it.id }.filter { it != "mir" }.toSet()
     qaList().filter { it.id in on }.forEach { q -> val c = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; gravity = Gravity.CENTER; setPadding(14, 6, 14, 6); minimumWidth = 180 }
       val col = if (q.on()) 0xFF5AAEFF.toInt() else -1
-      c.addView(TextView(this).apply { text = if (q.id == "spd") "${speed}X" else q.icon; textSize = 22f; setTextColor(col); gravity = Gravity.CENTER })
+      val ic = ICONS[q.id]; if (ic != null) c.addView(ImageView(this).apply { setImageResource(ic); setColorFilter(col); layoutParams = LinearLayout.LayoutParams(dp(30), dp(30)) }) else c.addView(TextView(this).apply { text = if (q.id == "spd") "${speed}X" else q.icon; textSize = 22f; setTextColor(col); gravity = Gravity.CENTER })
       c.addView(TextView(this).apply { text = q.label; textSize = 10f; setTextColor(col); gravity = Gravity.CENTER })
       c.setOnClickListener { q.act(); renderQA(); wake() }; qa.addView(c) } }
 
@@ -187,7 +190,7 @@ class PlayerActivity : AppCompatActivity() {
   private fun eqP() { if (eq == null) eq = MediaPlayer.Equalizer.create()
     openPanel("Equalizer") { check("Equalizer on", eqOn) { eqOn = it; applyEq(); renderQA() }
       val pn = (0 until MediaPlayer.Equalizer.getPresetCount()).map { MediaPlayer.Equalizer.getPresetName(it) }
-      radios(pn, -1) { eq = MediaPlayer.Equalizer.createFromPreset(it); eqOn = true; applyEq(); renderQA(); eqP() }
+      radios(pn, eqPreset) { eqPreset = it; eq = MediaPlayer.Equalizer.createFromPreset(it); eqOn = true; applyEq(); renderQA(); eqP() }
       slider("Preamp", -20, 20, eq!!.preAmp.toInt()) { eq!!.preAmp = it.toFloat(); applyEq() }
       for (b in 0 until MediaPlayer.Equalizer.getBandCount()) slider("${MediaPlayer.Equalizer.getBandFrequency(b).toInt()} Hz", -20, 20, eq!!.getAmp(b).toInt()) { eq!!.setAmp(b, it.toFloat()); applyEq() } } }
   private fun afxP() { openPanel("Audio Effect") { slider("Volume boost ($boost%)", 100, 200, boost) { boost = it; if (!muted) mp.volume = it }; item("Stronger than 100% may distort sound.", 12f) } }

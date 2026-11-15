@@ -4,12 +4,11 @@
   <TextView android:id="@+id/hud" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_gravity="center" android:background="#99000000" android:textColor="#fff" android:textSize="22sp" android:padding="12dp" android:visibility="gone"/>
   <LinearLayout android:id="@+id/top" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_gravity="top" android:orientation="vertical" android:background="#99000000" android:padding="6dp">
     <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center_vertical">
-      <Button android:id="@+id/bBack" style="@style/Ib" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="←"/>
-      <TextView android:id="@+id/title" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:textColor="#fff" android:textSize="14sp" android:maxLines="2"/>
-      <Button android:id="@+id/bAud" style="@style/Ib" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="🎵"/>
-      <Button android:id="@+id/bSub" style="@style/Ib" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="CC" android:textSize="16sp"/>
+      <ImageButton android:id="@+id/bBack" android:layout_width="48dp" android:layout_height="48dp" android:src="@drawable/ic_back" android:background="?attr/selectableItemBackgroundBorderless" android:scaleType="fitCenter" android:padding="12dp" />
+      <TextView android:id="@+id/title" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:textColor="#fff" android:textSize="14sp" android:maxLines="2" android:paddingStart="6dp"/>
+      <ImageButton android:id="@+id/bAud" android:layout_width="48dp" android:layout_height="48dp" android:src="@drawable/ic_music" android:background="?attr/selectableItemBackgroundBorderless" android:scaleType="fitCenter" android:padding="12dp" /><ImageButton android:id="@+id/bSub" android:layout_width="48dp" android:layout_height="48dp" android:src="@drawable/ic_cc" android:background="?attr/selectableItemBackgroundBorderless" android:scaleType="fitCenter" android:padding="12dp" />
       <Button android:id="@+id/bDec" style="@style/Ib" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="HW" android:textSize="16sp"/>
-      <Button android:id="@+id/bMore" style="@style/Ib" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="⋮"/>
+      <ImageButton android:id="@+id/bMore" android:layout_width="48dp" android:layout_height="48dp" android:src="@drawable/ic_more" android:background="?attr/selectableItemBackgroundBorderless" android:scaleType="fitCenter" android:padding="12dp" />
     </LinearLayout>
     <HorizontalScrollView android:layout_width="match_parent" android:layout_height="wrap_content" android:scrollbars="none"><LinearLayout android:id="@+id/qa" android:layout_width="wrap_content" android:layout_height="wrap_content" android:orientation="horizontal"/></HorizontalScrollView>
   </LinearLayout>
@@ -20,17 +19,10 @@
       <TextView android:id="@+id/tDur" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textColor="#fff" android:text="00:00" android:padding="6dp"/>
     </LinearLayout>
     <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center_vertical">
-      <Button android:id="@+id/bLock" style="@style/Ib" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="🔓"/>
-      <View android:layout_width="0dp" android:layout_height="1dp" android:layout_weight="1"/>
-      <Button android:id="@+id/bPrev" style="@style/Ib" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="⏮"/>
-      <Button android:id="@+id/bPlay" style="@style/Ib" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="❚❚" android:textSize="28sp"/>
-      <Button android:id="@+id/bNext" style="@style/Ib" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="⏭"/>
-      <View android:layout_width="0dp" android:layout_height="1dp" android:layout_weight="1"/>
-      <Button android:id="@+id/bAr" style="@style/Ib" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="▣"/>
-      <Button android:id="@+id/bPip" style="@style/Ib" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="⧉"/>
+      <ImageButton android:id="@+id/bLock" android:layout_width="48dp" android:layout_height="48dp" android:src="@drawable/ic_unlock" android:background="?attr/selectableItemBackgroundBorderless" android:scaleType="fitCenter" android:padding="12dp" /><View android:layout_width="0dp" android:layout_height="1dp" android:layout_weight="1"/><ImageButton android:id="@+id/bPrev" android:layout_width="48dp" android:layout_height="48dp" android:src="@drawable/ic_prev" android:background="?attr/selectableItemBackgroundBorderless" android:scaleType="fitCenter" android:padding="12dp" /><ImageButton android:id="@+id/bPlay" android:layout_width="60dp" android:layout_height="60dp" android:src="@drawable/ic_pause" android:background="?attr/selectableItemBackgroundBorderless" android:scaleType="fitCenter" android:padding="10dp" /><ImageButton android:id="@+id/bNext" android:layout_width="48dp" android:layout_height="48dp" android:src="@drawable/ic_next" android:background="?attr/selectableItemBackgroundBorderless" android:scaleType="fitCenter" android:padding="12dp" /><View android:layout_width="0dp" android:layout_height="1dp" android:layout_weight="1"/><ImageButton android:id="@+id/bAr" android:layout_width="48dp" android:layout_height="48dp" android:src="@drawable/ic_aspect" android:background="?attr/selectableItemBackgroundBorderless" android:scaleType="fitCenter" android:padding="12dp" /><ImageButton android:id="@+id/bPip" android:layout_width="48dp" android:layout_height="48dp" android:src="@drawable/ic_pip" android:background="?attr/selectableItemBackgroundBorderless" android:scaleType="fitCenter" android:padding="12dp" />
     </LinearLayout>
   </LinearLayout>
-  <Button android:id="@+id/bUnlock" style="@style/Ib" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_gravity="end|center_vertical" android:text="🔒" android:visibility="gone"/>
+  <ImageButton android:id="@+id/bUnlock" android:layout_width="48dp" android:layout_height="48dp" android:src="@drawable/ic_lock" android:background="?attr/selectableItemBackgroundBorderless" android:scaleType="fitCenter" android:padding="12dp" android:layout_gravity="end|center_vertical" android:visibility="gone"/>
   <ScrollView android:id="@+id/panelHost" android:layout_width="360dp" android:layout_height="match_parent" android:layout_gravity="end" android:background="#F0101010" android:visibility="gone">
     <LinearLayout android:id="@+id/panel" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:padding="18dp"/>
   </ScrollView>

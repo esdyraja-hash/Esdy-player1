@@ -14,6 +14,7 @@ class MusicActivity : AppCompatActivity() {
   private val h = Handler(Looper.getMainLooper()); private val ex = Executors.newSingleThreadExecutor(); private val prefs by lazy { getSharedPreferences("esdy", 0) }
   private lateinit var deck: DeckView; private lateinit var seek: SeekBar; private var lastIdx = -1; private val born = SystemClock.uptimeMillis()
   private fun t(id: Int) = findViewById<TextView>(id)
+  private fun im(id: Int) = findViewById<ImageView>(id)
   private fun fmt(ms: Long) = "%d:%02d".format(ms / 60000, ms / 1000 % 60)
   private fun svc() = MusicService.instance
 
@@ -21,13 +22,13 @@ class MusicActivity : AppCompatActivity() {
     super.onCreate(b); setContentView(R.layout.activity_music); requestedOrientation = android.content.pm.ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
     deck = DeckView(this).also { findViewById<FrameLayout>(R.id.deckHost).addView(it, FrameLayout.LayoutParams(-1, -1)) }; deck.mode = prefs.getInt("skin", 0)
     seek = findViewById(R.id.mSeek); t(R.id.mTitle).isSelected = true
-    t(R.id.mClose).setOnClickListener { finish() }; t(R.id.mPlay).setOnClickListener { svc()?.toggle() }; t(R.id.mNext).setOnClickListener { svc()?.next() }; t(R.id.mPrev).setOnClickListener { svc()?.prev() }
-    t(R.id.mShuf).setOnClickListener { svc()?.let { it.shuffle = !it.shuffle } }; t(R.id.mRep).setOnClickListener { svc()?.let { it.loop = (it.loop + 1) % 3 } }
-    t(R.id.mAb).setOnClickListener { svc()?.abTap() }; t(R.id.mEq).setOnClickListener { eqDlg() }; t(R.id.mSpd).setOnClickListener { spdDlg() }
-    t(R.id.mFav).setOnClickListener { val s = svc() ?: return@setOnClickListener; val f = (prefs.getStringSet("favs", emptySet()) ?: emptySet()).toMutableSet(); if (!f.add(s.uri)) f.remove(s.uri); prefs.edit().putStringSet("favs", HashSet(f)).apply() }
-    t(R.id.mMore).setOnClickListener { moreDlg() }; t(R.id.mLyr).setOnClickListener { lyrics() }
+    im(R.id.mClose).setOnClickListener { finish() }; im(R.id.mPlay).setOnClickListener { svc()?.toggle() }; im(R.id.mNext).setOnClickListener { svc()?.next() }; im(R.id.mPrev).setOnClickListener { svc()?.prev() }
+    im(R.id.mShuf).setOnClickListener { svc()?.let { it.shuffle = !it.shuffle } }; im(R.id.mRep).setOnClickListener { svc()?.let { it.loop = (it.loop + 1) % 3 } }
+    t(R.id.mAb).setOnClickListener { svc()?.abTap() }; im(R.id.mEq).setOnClickListener { eqDlg() }; t(R.id.mSpd).setOnClickListener { spdDlg() }
+    im(R.id.mFav).setOnClickListener { val s = svc() ?: return@setOnClickListener; val f = (prefs.getStringSet("favs", emptySet()) ?: emptySet()).toMutableSet(); if (!f.add(s.uri)) f.remove(s.uri); prefs.edit().putStringSet("favs", HashSet(f)).apply() }
+    im(R.id.mMore).setOnClickListener { moreDlg() }; t(R.id.mLyr).setOnClickListener { lyrics() }
     t(R.id.mQ).setOnClickListener { val s = svc() ?: return@setOnClickListener; AlertDialog.Builder(this).setTitle("Playing Queue").setItems(s.names.toTypedArray()) { _, i -> s.jump(i) }.show() }
-    t(R.id.mShare).setOnClickListener { val s = svc() ?: return@setOnClickListener; try { startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND).setType("audio/*").putExtra(Intent.EXTRA_STREAM, Uri.parse(s.uri)).addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION), "Share")) } catch (_: Exception) {} }
+    im(R.id.mShare).setOnClickListener { val s = svc() ?: return@setOnClickListener; try { startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND).setType("audio/*").putExtra(Intent.EXTRA_STREAM, Uri.parse(s.uri)).addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION), "Share")) } catch (_: Exception) {} }
     seek.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener { override fun onProgressChanged(sb: SeekBar, p: Int, u: Boolean) { if (u) svc()?.let { it.seekTo(it.length * p / 1000) } }
       override fun onStartTrackingTouch(sb: SeekBar) {}; override fun onStopTrackingTouch(sb: SeekBar) {} })
     tick()
@@ -37,18 +38,18 @@ class MusicActivity : AppCompatActivity() {
     if (s == null || !s.hasMedia) { if (SystemClock.uptimeMillis() - born > 3000) { finish(); return } }
     else {
       t(R.id.mTitle).text = s.title; t(R.id.mArtist).text = s.artist; deck.artist = s.artist; deck.spinning = s.playing
-      if (s.length > 0) { seek.progress = (s.time * 1000 / s.length).toInt(); t(R.id.mCur).text = fmt(s.time); t(R.id.mDur).text = fmt(s.length) }
-      t(R.id.mPlay).text = if (s.playing) "❚❚" else "▶"; val on = 0xFFFF6B5A.toInt()
-      t(R.id.mShuf).setTextColor(if (s.shuffle) on else -1); t(R.id.mRep).setTextColor(if (s.loop > 0) on else -1); t(R.id.mRep).text = if (s.loop == 1) "🔂" else "🔁"
+      if (s.length > 0) { deck.progress = s.time.toFloat() / s.length; seek.progress = (s.time * 1000 / s.length).toInt(); t(R.id.mCur).text = fmt(s.time); t(R.id.mDur).text = fmt(s.length) }
+      im(R.id.mPlay).setImageResource(if (s.playing) R.drawable.ic_pause else R.drawable.ic_play); val on = 0xFFFF6B5A.toInt()
+      im(R.id.mShuf).setColorFilter(if (s.shuffle) on else -1); im(R.id.mRep).setColorFilter(if (s.loop > 0) on else -1); im(R.id.mRep).setImageResource(if (s.loop == 1) R.drawable.ic_repeat_one else R.drawable.ic_repeat)
       t(R.id.mAb).setTextColor(if (s.abA >= 0) on else -1); t(R.id.mSpd).text = "${s.rate}X"
-      val fav = (prefs.getStringSet("favs", emptySet()) ?: emptySet()).contains(s.uri); t(R.id.mFav).text = if (fav) "♥" else "♡"; t(R.id.mFav).setTextColor(if (fav) on else -1)
+      val fav = (prefs.getStringSet("favs", emptySet()) ?: emptySet()).contains(s.uri); im(R.id.mFav).setImageResource(if (fav) R.drawable.ic_fav_on else R.drawable.ic_fav); im(R.id.mFav).setColorFilter(if (fav) on else -1)
       if (s.idx != lastIdx) { lastIdx = s.idx; deck.art = null; val u = Uri.parse(s.uri)
         ex.execute { val bmp = try { if (Build.VERSION.SDK_INT >= 29) contentResolver.loadThumbnail(u, Size(600, 600), null) else null } catch (_: Throwable) { null }; runOnUiThread { deck.art = bmp } } }
     }
     h.postDelayed({ tick() }, 300)
   }
   private fun eqDlg() { val s = svc() ?: return; val n = (0 until MediaPlayer.Equalizer.getPresetCount()).map { MediaPlayer.Equalizer.getPresetName(it) }
-    AlertDialog.Builder(this).setTitle("Equalizer").setItems((listOf("Off") + n).toTypedArray()) { _, i -> s.setEq(i - 1) }.show() }
+    AlertDialog.Builder(this).setTitle("Equalizer").setSingleChoiceItems((listOf("Off") + n).toTypedArray(), s.eqIdx + 1) { d, i -> s.setEq(i - 1); d.dismiss() }.show() }
   private fun spdDlg() { val s = svc() ?: return; val v = floatArrayOf(.5f, .75f, 1f, 1.25f, 1.5f, 2f)
     AlertDialog.Builder(this).setTitle("Speed").setItems(v.map { "${it}x" }.toTypedArray()) { _, i -> s.rate = v[i] }.show() }
   private fun moreDlg() { val s = svc() ?: return

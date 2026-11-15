@@ -1,19 +1,19 @@
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android" android:layout_width="match_parent" android:layout_height="match_parent" android:orientation="vertical" android:background="@drawable/bg_music" android:paddingTop="30dp">
   <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center_vertical" android:padding="8dp">
-    <TextView android:id="@+id/mClose" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="⌄" android:textColor="#fff" android:textSize="30sp" android:padding="10dp"/>
+    <ImageView android:id="@+id/mClose" android:layout_width="48dp" android:src="@drawable/ic_down" android:scaleType="fitCenter" android:layout_height="48dp" android:padding="12dp"/>
     <LinearLayout android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:orientation="vertical" android:gravity="center">
       <TextView android:id="@+id/mTitle" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textColor="#fff" android:textSize="20sp" android:textStyle="bold" android:singleLine="true" android:ellipsize="marquee" android:marqueeRepeatLimit="marquee_forever"/>
       <TextView android:id="@+id/mArtist" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textColor="#DDFFFFFF" android:textSize="14sp" android:singleLine="true"/>
     </LinearLayout>
-    <TextView android:id="@+id/mShare" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="➦" android:textColor="#fff" android:textSize="24sp" android:padding="10dp"/>
+    <ImageView android:id="@+id/mShare" android:layout_width="48dp" android:src="@drawable/ic_share" android:scaleType="fitCenter" android:layout_height="48dp" android:padding="12dp"/>
   </LinearLayout>
   <FrameLayout android:id="@+id/deckHost" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1"/>
   <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:padding="6dp">
-    <TextView android:id="@+id/mEq" style="@style/MBtn" android:text="🎚"/>
+    <ImageView android:id="@+id/mEq" style="@style/MBtn" android:src="@drawable/ic_tune" android:scaleType="fitCenter" android:layout_height="48dp" android:padding="12dp"/>
     <TextView android:id="@+id/mAb" style="@style/MBtn" android:text="A↔B"/>
     <TextView android:id="@+id/mSpd" style="@style/MBtn" android:text="1X"/>
-    <TextView android:id="@+id/mFav" style="@style/MBtn" android:text="♡"/>
-    <TextView android:id="@+id/mMore" style="@style/MBtn" android:text="⋮"/>
+    <ImageView android:id="@+id/mFav" style="@style/MBtn" android:src="@drawable/ic_fav" android:scaleType="fitCenter" android:layout_height="48dp" android:padding="12dp"/>
+    <ImageView android:id="@+id/mMore" style="@style/MBtn" android:src="@drawable/ic_more" android:scaleType="fitCenter" android:layout_height="48dp" android:padding="12dp"/>
   </LinearLayout>
   <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center_vertical" android:paddingStart="20dp" android:paddingEnd="20dp">
     <TextView android:id="@+id/mCur" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textColor="#fff" android:text="0:00"/>
@@ -21,14 +21,14 @@
     <TextView android:id="@+id/mDur" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textColor="#fff" android:text="0:00"/>
   </LinearLayout>
   <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center_vertical" android:padding="10dp">
-    <TextView android:id="@+id/mShuf" style="@style/MBtn" android:text="⤮"/>
-    <TextView android:id="@+id/mPrev" style="@style/MBtn" android:text="⏮" android:textSize="30sp"/>
-    <TextView android:id="@+id/mPlay" style="@style/MBtn" android:text="❚❚" android:textSize="34sp"/>
-    <TextView android:id="@+id/mNext" style="@style/MBtn" android:text="⏭" android:textSize="30sp"/>
-    <TextView android:id="@+id/mRep" style="@style/MBtn" android:text="🔁"/>
+    <ImageView android:id="@+id/mShuf" style="@style/MBtn" android:src="@drawable/ic_shuffle" android:scaleType="fitCenter" android:layout_height="48dp" android:padding="12dp"/>
+    <ImageView android:id="@+id/mPrev" style="@style/MBtn" android:src="@drawable/ic_prev" android:scaleType="fitCenter" android:layout_height="52dp" android:padding="12dp"/>
+    <ImageView android:id="@+id/mPlay" style="@style/MBtn" android:src="@drawable/ic_pause" android:scaleType="fitCenter" android:layout_height="72dp" android:padding="10dp"/>
+    <ImageView android:id="@+id/mNext" style="@style/MBtn" android:src="@drawable/ic_next" android:scaleType="fitCenter" android:layout_height="52dp" android:padding="12dp"/>
+    <ImageView android:id="@+id/mRep" style="@style/MBtn" android:src="@drawable/ic_repeat" android:scaleType="fitCenter" android:layout_height="48dp" android:padding="12dp"/>
   </LinearLayout>
   <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:paddingBottom="28dp" android:paddingStart="16dp" android:paddingEnd="16dp">
-    <TextView android:id="@+id/mLyr" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:text="📝  Lyrics" android:textColor="#fff" android:textSize="16sp" android:padding="10dp"/>
-    <TextView android:id="@+id/mQ" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:text="☰  Playing Queue" android:textColor="#fff" android:textSize="16sp" android:padding="10dp" android:gravity="end"/>
+    <TextView android:id="@+id/mLyr" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:text="Lyrics" android:drawableStart="@drawable/ic_lyrics" android:drawablePadding="12dp" android:gravity="center_vertical" android:textColor="#fff" android:textSize="16sp" android:padding="10dp"/>
+    <TextView android:id="@+id/mQ" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:text="Playing Queue" android:drawableStart="@drawable/ic_queue" android:drawablePadding="12dp" android:textColor="#fff" android:textSize="16sp" android:padding="10dp" android:gravity="end"/>
   </LinearLayout>
 </LinearLayout>

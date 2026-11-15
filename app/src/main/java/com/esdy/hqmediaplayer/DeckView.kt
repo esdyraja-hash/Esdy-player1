@@ -6,8 +6,8 @@ import android.view.View
 
 class DeckView(c: Context) : View(c) {
   var mode = 0; var art: Bitmap? = null; var spinning = false; var artist = ""
-  private var angle = 0f; private var arm = -14f; private val p = Paint(Paint.ANTI_ALIAS_FLAG)
-  private val loop = object : Runnable { override fun run() { if (spinning) angle = (angle + 1.3f) % 360f
+  private var angle = 0f; private var reelA = 0f; var progress = 0f; private var arm = -14f; private val p = Paint(Paint.ANTI_ALIAS_FLAG)
+  private val loop = object : Runnable { override fun run() { if (spinning) { angle = (angle + 1.3f) % 360f; reelA = (reelA + 5f) % 360f }
     arm += ((if (spinning) 12f else -14f) - arm) * 0.08f; invalidate(); postOnAnimation(this) } }
   override fun onAttachedToWindow() { super.onAttachedToWindow(); postOnAnimation(loop) }
   override fun onDetachedFromWindow() { super.onDetachedFromWindow(); removeCallbacks(loop) }
@@ -31,7 +31,9 @@ class DeckView(c: Context) : View(c) {
     p.color = 0xFFC9CED8.toInt(); cv.drawRect(l + bw * 0.06f, t + bh * 0.1f, l + bw * 0.94f, t + bh * 0.14f, p)
     p.color = -1; p.textAlign = Paint.Align.CENTER; p.textSize = bw * 0.055f; p.typeface = Typeface.create(Typeface.SERIF, Typeface.ITALIC); cv.drawText(artist.take(24), cx, t + bh * 0.25f, p)
     val wy = t + bh * 0.5f; p.color = 0xFF111317.toInt(); cv.drawRoundRect(RectF(cx - bw * 0.34f, wy - bw * 0.1f, cx + bw * 0.34f, wy + bw * 0.1f), bw * 0.1f, bw * 0.1f, p)
-    for (k in intArrayOf(-1, 1)) reel(cv, cx + k * bw * 0.2f, wy, bw * 0.085f, if (k < 0) angle else -angle)
+    cv.save(); val wp = Path(); wp.addRoundRect(RectF(cx - bw * 0.34f, wy - bw * 0.1f, cx + bw * 0.34f, wy + bw * 0.1f), bw * 0.1f, bw * 0.1f, Path.Direction.CW); cv.clipPath(wp)
+    p.style = Paint.Style.FILL; p.color = 0xFF3A2A1E.toInt(); val pr = progress.coerceIn(0f, 1f); cv.drawCircle(cx - bw * 0.2f, wy, bw * (0.1f + 0.1f * (1 - pr)), p); cv.drawCircle(cx + bw * 0.2f, wy, bw * (0.1f + 0.1f * pr), p); cv.restore()
+    for (k in intArrayOf(-1, 1)) reel(cv, cx + k * bw * 0.2f, wy, bw * 0.075f, if (k < 0) reelA else -reelA)
     p.style = Paint.Style.FILL; p.color = 0xFF17181C.toInt(); cv.drawRect(l + bw * 0.18f, t + bh * 0.76f, l + bw * 0.82f, t + bh, p)
     p.color = 0xFF8A8D94.toInt(); for (sx in floatArrayOf(0.04f, 0.96f)) for (sy in floatArrayOf(0.06f, 0.94f)) cv.drawCircle(l + bw * sx, t + bh * sy, bw * 0.014f, p)
   }
