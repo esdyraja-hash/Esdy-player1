@@ -12,7 +12,7 @@ import java.util.concurrent.Executors
 
 class MusicActivity : AppCompatActivity() {
   private val h = Handler(Looper.getMainLooper()); private val ex = Executors.newSingleThreadExecutor(); private val prefs by lazy { getSharedPreferences("esdy", 0) }
-  private lateinit var deck: DeckView; private lateinit var seek: SeekBar; private var lastIdx = -1; private val born = SystemClock.uptimeMillis()
+  private lateinit var deck: DeckView; private lateinit var seek: SeekBar; private var lastIdx = -1; private var skinBase = -1; private val born = SystemClock.uptimeMillis()
   private fun t(id: Int) = findViewById<TextView>(id)
   private fun im(id: Int) = findViewById<ImageView>(id)
   private fun fmt(ms: Long) = "%d:%02d".format(ms / 60000, ms / 1000 % 60)
@@ -37,7 +37,7 @@ class MusicActivity : AppCompatActivity() {
     val s = svc()
     if (s == null || !s.hasMedia) { if (SystemClock.uptimeMillis() - born > 3000) { finish(); return } }
     else {
-      t(R.id.mTitle).text = s.title; t(R.id.mArtist).text = s.artist; deck.artist = s.artist; deck.spinning = s.playing
+      t(R.id.mTitle).text = s.title; t(R.id.mArtist).text = s.artist; if (skinBase < 0) skinBase = kotlin.math.abs(s.uris.firstOrNull().hashCode()) % 8; deck.artist = s.artist; deck.title = s.title; deck.skin = (s.idx + skinBase) % 8; deck.spinning = s.playing
       if (s.length > 0) { deck.progress = s.time.toFloat() / s.length; seek.progress = (s.time * 1000 / s.length).toInt(); t(R.id.mCur).text = fmt(s.time); t(R.id.mDur).text = fmt(s.length) }
       im(R.id.mPlay).setImageResource(if (s.playing) R.drawable.ic_pause else R.drawable.ic_play); val on = 0xFFFF6B5A.toInt()
       im(R.id.mShuf).setColorFilter(if (s.shuffle) on else -1); im(R.id.mRep).setColorFilter(if (s.loop > 0) on else -1); im(R.id.mRep).setImageResource(if (s.loop == 1) R.drawable.ic_repeat_one else R.drawable.ic_repeat)
