@@ -106,7 +106,7 @@ class PlayerActivity : AppCompatActivity() {
 
   // ---------- loading / decoding
   private fun load(i: Int) {
-    idx = i; prefs.edit().putString("last", uris[i]).apply(); val u = Uri.parse(uris[i]); findViewById<TextView>(R.id.title).text = names.getOrElse(i) { "" }
+    idx = i; prefs.edit().putString("last", uris[i]).apply(); Recent.add(this, uris[i], names.getOrElse(i) { "" }); val u = Uri.parse(uris[i]); findViewById<TextView>(R.id.title).text = names.getOrElse(i) { "" }
     try { pfd?.close() } catch (_: Exception) {}; pfd = null
     val m = if (u.scheme == "content") { pfd = contentResolver.openFileDescriptor(u, "r"); Media(lib, pfd!!.fileDescriptor) } else Media(lib, u)
     when (hw) { 0 -> m.setHWDecoderEnabled(true, false); 1 -> m.setHWDecoderEnabled(true, true); else -> m.setHWDecoderEnabled(false, false) }

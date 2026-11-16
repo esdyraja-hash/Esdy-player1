@@ -8,6 +8,7 @@
     <ImageView android:id="@+id/mShare" android:layout_width="48dp" android:src="@drawable/ic_share" android:scaleType="fitCenter" android:layout_height="48dp" android:padding="12dp"/>
   </LinearLayout>
   <FrameLayout android:id="@+id/deckHost" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1"/>
+  <TextView android:id="@+id/mLine" android:layout_width="match_parent" android:layout_height="52dp" android:gravity="center" android:textColor="#FFE9C8" android:textSize="16sp" android:paddingStart="20dp" android:paddingEnd="20dp" android:maxLines="2"/>
   <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:padding="6dp">
     <ImageView android:id="@+id/mEq" style="@style/MBtn" android:src="@drawable/ic_tune" android:scaleType="fitCenter" android:layout_height="48dp" android:padding="12dp"/>
     <TextView android:id="@+id/mAb" style="@style/MBtn" android:text="A↔B"/>
