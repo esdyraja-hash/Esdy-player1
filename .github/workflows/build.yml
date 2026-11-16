@@ -9,6 +9,6 @@ jobs:
         with: { distribution: temurin, java-version: 17 }
       - uses: gradle/actions/setup-gradle@v3
         with: { gradle-version: 8.7 }
-      - run: gradle assembleDebug --no-daemon
+      - run: gradle assembleDebug --no-daemon -PvCode=${{ github.run_number }}
       - uses: actions/upload-artifact@v4
-        with: { name: ESDY-HQ-Player-APK, path: app/build/outputs/apk/debug/*.apk }
+        with: { name: ESDY-HQ-Player-APK, path: app/build/outputs/apk/debug/*.apk, retention-days: 2 }

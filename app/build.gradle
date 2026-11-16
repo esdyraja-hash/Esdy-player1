@@ -1,7 +1,10 @@
 plugins { id 'com.android.application'; id 'org.jetbrains.kotlin.android' }
+def vc = (project.findProperty('vCode') ?: '1').toString().toInteger()
 android {
   namespace 'com.esdy.hqmediaplayer'; compileSdk 34
-  defaultConfig { applicationId 'com.esdy.hqmediaplayer'; minSdk 23; targetSdk 34; versionCode 1; versionName '3.0'
+  signingConfigs { esdy { storeFile file('esdy.keystore'); storePassword 'esdyplayer'; keyAlias 'esdy'; keyPassword 'esdyplayer' } }
+  buildTypes { debug { signingConfig signingConfigs.esdy }; release { signingConfig signingConfigs.esdy } }
+  defaultConfig { applicationId 'com.esdy.hqmediaplayer'; minSdk 23; targetSdk 34; versionCode vc; versionName '3.0'
     ndk { abiFilters 'arm64-v8a', 'armeabi-v7a' } }
   compileOptions { sourceCompatibility JavaVersion.VERSION_17; targetCompatibility JavaVersion.VERSION_17 }
   kotlinOptions { jvmTarget = '17' }

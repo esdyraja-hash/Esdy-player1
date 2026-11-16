@@ -7,6 +7,7 @@ import android.graphics.Bitmap
 import android.graphics.drawable.GradientDrawable
 import android.net.Uri
 import android.os.Build
+import android.text.InputType
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
@@ -21,6 +22,7 @@ import androidx.appcompat.app.AppCompatActivity
 import java.util.concurrent.Executors
 
 class HomeActivity : AppCompatActivity() {
+  companion object { var unlocked = false }
   data class V(val uri: Uri, val name: String, val ms: Long, val size: Long, val folder: String, val artist: String = "")
   class Row(val uri: Uri?, val icon: String, val t: String, val s: String)
   private val videos = mutableListOf<V>(); private val songs = mutableListOf<V>(); private var shown = listOf<V>()
@@ -38,6 +40,7 @@ class HomeActivity : AppCompatActivity() {
     findViewById<View>(R.id.bAll).setOnClickListener { flat = !flat; folder = null; tab = 0; render() }
     findViewById<View>(R.id.bSearch).setOnClickListener { val et = EditText(this); et.setText(q)
       AlertDialog.Builder(this).setTitle("Search").setView(et).setPositiveButton("OK") { _, _ -> q = et.text.toString().trim(); render() }.setNegativeButton("Clear") { _, _ -> q = ""; render() }.show() }
+    findViewById<ImageView>(R.id.bSet).apply { setColorFilter(0xFF1B1F3B.toInt()); setOnClickListener { startActivity(Intent(this@HomeActivity, SettingsActivity::class.java).putStringArrayListExtra("folders", ArrayList(videos.map { it.folder }.distinct().sorted()))) } }
     fab.setOnClickListener { prefs.getString("last", null)?.let { startActivity(Intent(this, PlayerActivity::class.java).setData(Uri.parse(it))) } }
     miniPlay.setOnClickListener { MusicService.instance?.toggle() }; mini.setOnClickListener { startActivity(Intent(this, MusicActivity::class.java)) }; findViewById<View>(R.id.miniNext).setOnClickListener { MusicService.instance?.let { it.next() } }
     findViewById<View>(R.id.miniQ).setOnClickListener { val s = MusicService.instance ?: return@setOnClickListener
@@ -46,6 +49,13 @@ class HomeActivity : AppCompatActivity() {
     chip("🌐", "Network") { val et = EditText(this); et.hint = "https://…/video.mkv"
       AlertDialog.Builder(this).setTitle("Play network stream").setView(et).setPositiveButton("Play") { _, _ -> startActivity(Intent(this, PlayerActivity::class.java).setData(Uri.parse(et.text.toString().trim()))) }.show() }
     chip("⏯", "Resume") { fab.performClick() }
+    gate { start() }
+  }
+  private fun gate(f: () -> Unit) { val pin = prefs.getString("pin", null); if (pin == null || unlocked) { f(); return }
+    val et = EditText(this).apply { inputType = InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_VARIATION_PASSWORD; hint = "PIN" }
+    AlertDialog.Builder(this).setTitle("Enter PIN").setView(et).setCancelable(false).setPositiveButton("OK") { _, _ ->
+      if (et.text.toString() == pin) { unlocked = true; f() } else { Toast.makeText(this, "Wrong PIN", Toast.LENGTH_SHORT).show(); gate(f) } }.setNegativeButton("Exit") { _, _ -> finish() }.show() }
+  private fun start() {
     val perms = if (Build.VERSION.SDK_INT >= 33) arrayOf(Manifest.permission.READ_MEDIA_VIDEO, Manifest.permission.READ_MEDIA_AUDIO, Manifest.permission.POST_NOTIFICATIONS) else arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE)
     if (perms.all { checkSelfPermission(it) == 0 }) load() else requestPermissions(perms, 2)
   }
@@ -83,7 +93,7 @@ class HomeActivity : AppCompatActivity() {
       .putStringArrayListExtra("names", ArrayList(sub.map { it.name })).putExtra("index", i - s))
   }
   private fun render() {
-    val ql = q.lowercase(); val on = 0xFF2F6BEB.toInt(); val off = 0xFF8A90A6.toInt()
+    val hidden = prefs.getStringSet("hidden", emptySet()) ?: emptySet<String>(); val ql = q.lowercase(); val on = 0xFF2F6BEB.toInt(); val off = 0xFF8A90A6.toInt()
     navL.setTextColor(if (tab == 0) on else off); navM.setTextColor(if (tab == 1) on else off)
     title.text = if (tab == 1) "Music" else (folder ?: if (flat) "All videos" else "Folders")
     fab.visibility = if (tab == 0 && prefs.getString("last", null) != null) View.VISIBLE else View.GONE
@@ -91,8 +101,8 @@ class HomeActivity : AppCompatActivity() {
     if (tab == 1) { val list = songs.filter { ql.isEmpty() || it.name.lowercase().contains(ql) }
       list.forEachIndexed { i, s -> rows.add(Row(s.uri, "🎵", s.name, "${s.artist}  ·  ${dur(s.ms)}")); acts.add { MusicService.start(this, list.map { it.uri.toString() }, list.map { it.name }, list.map { it.artist }, i); startActivity(Intent(this, MusicActivity::class.java)) } }
     } else if (folder == null && !flat) {
-      videos.filter { ql.isEmpty() || it.name.lowercase().contains(ql) }.groupBy { it.folder }.forEach { (f, l) -> rows.add(Row(null, "📁", f, "${l.size} video${if (l.size > 1) "s" else ""}")); acts.add { folder = f; render() } }
-    } else { val list = videos.filter { (folder == null || it.folder == folder) && (ql.isEmpty() || it.name.lowercase().contains(ql)) }; shown = list
+      videos.filter { it.folder !in hidden && (ql.isEmpty() || it.name.lowercase().contains(ql)) }.groupBy { it.folder }.forEach { (f, l) -> rows.add(Row(null, "📁", f, "${l.size} video${if (l.size > 1) "s" else ""}")); acts.add { folder = f; render() } }
+    } else { val list = videos.filter { (folder == null || it.folder == folder) && it.folder !in hidden && (ql.isEmpty() || it.name.lowercase().contains(ql)) }; shown = list
       list.forEachIndexed { i, v -> rows.add(Row(v.uri, "▶", v.name, "${dur(v.ms)}  ·  %.1f MB".format(v.size / 1048576.0))); acts.add { open(list, i) } } }
     lv.adapter = object : BaseAdapter() {
       override fun getCount() = rows.size; override fun getItem(i: Int) = rows[i]; override fun getItemId(i: Int) = i.toLong()

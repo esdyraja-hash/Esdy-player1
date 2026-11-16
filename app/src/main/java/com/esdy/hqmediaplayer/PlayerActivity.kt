@@ -48,13 +48,13 @@ class PlayerActivity : AppCompatActivity() {
   private val orients = intArrayOf(ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE, ActivityInfo.SCREEN_ORIENTATION_SENSOR_PORTRAIT, ActivityInfo.SCREEN_ORIENTATION_FULL_SENSOR)
   private val orientNames = listOf("Landscape", "Portrait", "Auto / sensor")
   private var mode = 0; private var sx = 0f; private var sy = 0f; private var startT = 0L; private var startBr = .5f; private var startVol = 0; private var lastTap = 0L; private var fast = false
-  private val longP = Runnable { if (mode == 0 && !locked) { fast = true; mp.rate = 2f; hud("2x") } }
+  private val longP = Runnable { if (mode == 0 && !locked && gp("g_long")) { fast = true; mp.rate = 2f; hud("2x") } }
   private val hideHud = Runnable { hud.visibility = View.GONE }; private val hideUi = Runnable { if (mp.isPlaying && panelHost.visibility != View.VISIBLE) showUi(false) }
   private val sgd by lazy { ScaleGestureDetector(this, object : ScaleGestureDetector.SimpleOnScaleGestureListener() {
     override fun onScale(d: ScaleGestureDetector): Boolean { zoom = (zoom * d.scaleFactor).coerceIn(1f, 4f); vlc.scaleX = zoom * (if (mirror) -1 else 1); vlc.scaleY = zoom; hud("${(zoom * 100).toInt()}%"); return true } }) }
 
   override fun onCreate(b: Bundle?) {
-    super.onCreate(b); window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)   // screen stays awake while playing
+    super.onCreate(b); if (getSharedPreferences("esdy", 0).getBoolean("keep_on", true)) window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)   // screen stays awake while playing
     setContentView(R.layout.activity_player); requestedOrientation = orients[0]; immersive()
     am = getSystemService(AUDIO_SERVICE) as AudioManager
     MusicService.instance?.pause()
@@ -101,6 +101,7 @@ class PlayerActivity : AppCompatActivity() {
   private fun fmt(ms: Long) = if (ms >= 3600000) "%d:%02d:%02d".format(ms / 3600000, ms / 60000 % 60, ms / 1000 % 60) else "%02d:%02d".format(ms / 60000, ms / 1000 % 60)
   private fun hud(t: String) { hud.text = t; hud.visibility = View.VISIBLE; h.removeCallbacks(hideHud); h.postDelayed(hideHud, 800) }
   private fun showUi(on: Boolean) { uiOn = on; val v = if (on) View.VISIBLE else View.GONE; top.visibility = v; bottom.visibility = v }
+  private fun gp(k: String) = prefs.getBoolean(k, true)
   private fun wake() { if (locked) return; showUi(true); h.removeCallbacks(hideUi); h.postDelayed(hideUi, 4000) }
 
   // ---------- loading / decoding
@@ -110,7 +111,7 @@ class PlayerActivity : AppCompatActivity() {
     val m = if (u.scheme == "content") { pfd = contentResolver.openFileDescriptor(u, "r"); Media(lib, pfd!!.fileDescriptor) } else Media(lib, u)
     when (hw) { 0 -> m.setHWDecoderEnabled(true, false); 1 -> m.setHWDecoderEnabled(true, true); else -> m.setHWDecoderEnabled(false, false) }
     ENC_V[prefs.getInt("sub_enc_i", 0)].takeIf { it.isNotEmpty() }?.let { m.addOption(":subsdec-encoding=$it") }; LANG_V[prefs.getInt("sub_lang_i", 0)].takeIf { it.isNotEmpty() }?.let { m.addOption(":sub-language=$it") }; mp.media = m; m.release(); mp.rate = speed; mp.volume = if (muted) 0 else boost; mp.play(); abA = -1; abB = -1; h.postDelayed({ mp.spuDelay = prefs.getInt("sub_sync", 0) * 1000L }, 1500)
-    val p = prefs.getLong("pos:" + uris[i], 0); if (p > 5000) h.postDelayed({ mp.time = p; hud("Resumed ${fmt(p)}") }, 900)
+    val p = prefs.getLong("pos:" + uris[i], 0); if (p > 5000 && prefs.getBoolean("resume", true)) h.postDelayed({ mp.time = p; hud("Resumed ${fmt(p)}") }, 900)
     applyEq()
   }
   private fun decoderDlg() { AlertDialog.Builder(this).setTitle("Select decoder").setSingleChoiceItems(arrayOf("HW decoder", "HW+ decoder", "SW decoder"), hw) { d, w ->
@@ -125,12 +126,12 @@ class PlayerActivity : AppCompatActivity() {
 
   // ---------- gestures
   private fun gesture(e: MotionEvent) {
-    sgd.onTouchEvent(e); if (e.pointerCount > 1 || sgd.isInProgress) { mode = -1; h.removeCallbacks(longP); return }
+    if (gp("g_zoom")) sgd.onTouchEvent(e); if (e.pointerCount > 1 || (gp("g_zoom") && sgd.isInProgress)) { mode = -1; h.removeCallbacks(longP); return }
     when (e.actionMasked) {
       MotionEvent.ACTION_DOWN -> { sx = e.x; sy = e.y; mode = 0; startT = mp.time; startVol = am.getStreamVolume(AudioManager.STREAM_MUSIC)
         startBr = window.attributes.screenBrightness.let { if (it < 0) .5f else it }; h.postDelayed(longP, 500) }
       MotionEvent.ACTION_MOVE -> if (!locked && mode >= 0) { val dx = e.x - sx; val dy = e.y - sy
-        if (mode == 0 && (abs(dx) > 40 || abs(dy) > 40)) { mode = if (abs(dx) > abs(dy)) 1 else if (sx < vlc.width / 2) 2 else 3; h.removeCallbacks(longP) }
+        if (mode == 0 && (abs(dx) > 40 || abs(dy) > 40)) { mode = if (abs(dx) > abs(dy)) 1 else if (sx < vlc.width / 2) 2 else 3; h.removeCallbacks(longP); if ((mode == 1 && !gp("g_seek")) || (mode == 2 && !gp("g_br")) || (mode == 3 && !gp("g_vol"))) mode = -1 }
         when (mode) {
           1 -> { val p = (startT + dx * 60).toLong().coerceIn(0, maxOf(0, mp.length)); mp.time = p; hud("${if (dx > 0) "+" else "−"}${abs(p - startT) / 1000}s   ${fmt(p)}") }
           2 -> { val br = (startBr - dy / vlc.height).coerceIn(.02f, 1f); window.attributes = window.attributes.also { it.screenBrightness = br }; hud("☀ ${(br * 100).toInt()}%") }
@@ -139,7 +140,7 @@ class PlayerActivity : AppCompatActivity() {
         if (mode == 0 && e.actionMasked == MotionEvent.ACTION_UP) {
           if (panelHost.visibility == View.VISIBLE) { panelHost.visibility = View.GONE; return }
           val n = SystemClock.uptimeMillis()
-          if (!locked && n - lastTap < 300) { when { e.x < vlc.width * .35 -> { mp.time -= 10000; hud("−10s") }; e.x > vlc.width * .65 -> { mp.time += 10000; hud("+10s") }; else -> if (mp.isPlaying) mp.pause() else mp.play() }; lastTap = 0 }
+          if (!locked && gp("g_dbl") && n - lastTap < 300) { val st = prefs.getInt("seek_step", 10) * 1000L; when { e.x < vlc.width * .35 -> { mp.time -= st; hud("−${st / 1000}s") }; e.x > vlc.width * .65 -> { mp.time += st; hud("+${st / 1000}s") }; else -> if (mp.isPlaying) mp.pause() else mp.play() }; lastTap = 0 }
           else { lastTap = n; if (locked) bUnlock.visibility = View.VISIBLE else if (uiOn) showUi(false) else wake() } } }
     }
   }
