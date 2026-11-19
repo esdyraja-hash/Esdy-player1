@@ -1,6 +1,8 @@
 package com.esdy.hqmediaplayer
 
 import android.content.Intent
+import android.graphics.drawable.ColorDrawable
+import android.graphics.drawable.GradientDrawable
 import android.net.Uri
 import android.os.*
 import android.util.Size
@@ -21,6 +23,7 @@ class MusicActivity : AppCompatActivity() {
   override fun onCreate(b: Bundle?) {
     super.onCreate(b); setContentView(R.layout.activity_music); requestedOrientation = android.content.pm.ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
     deck = DeckView(this).also { findViewById<FrameLayout>(R.id.deckHost).addView(it, FrameLayout.LayoutParams(-1, -1)) }; deck.mode = prefs.getInt("skin", 0)
+    findViewById<View>(R.id.musicRoot).background = if (T.mode(this) == 2) ColorDrawable(0xFF000000.toInt()) else GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM, intArrayOf(T.dark(T.accent(this), .42f), 0xFF202022.toInt()))
     seek = findViewById(R.id.mSeek); t(R.id.mTitle).isSelected = true
     im(R.id.mClose).setOnClickListener { finish() }; im(R.id.mPlay).setOnClickListener { svc()?.toggle() }; im(R.id.mNext).setOnClickListener { svc()?.next() }; im(R.id.mPrev).setOnClickListener { svc()?.prev() }
     im(R.id.mShuf).setOnClickListener { svc()?.let { it.shuffle = !it.shuffle } }; im(R.id.mRep).setOnClickListener { svc()?.let { it.loop = (it.loop + 1) % 3 } }

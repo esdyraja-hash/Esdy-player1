@@ -6,6 +6,11 @@ import android.content.pm.ActivityInfo
 import android.media.AudioManager
 import android.media.MediaMetadataRetriever
 import android.net.Uri
+import android.text.SpannableString
+import android.text.Spanned
+import android.text.TextPaint
+import android.text.method.LinkMovementMethod
+import android.text.style.ClickableSpan
 import android.os.*
 import android.provider.MediaStore
 import android.view.*
@@ -27,6 +32,8 @@ private val COLOR_N = listOf("White", "Yellow", "Cyan", "Green"); private val CO
 private val OUT_N = listOf("None", "Thin", "Normal", "Thick"); private val OUT_V = listOf(0, 2, 4, 6)
 private val BG_N = listOf("None", "Semi-transparent", "Solid"); private val BG_V = listOf(0, 128, 255)
 private val POS_N = listOf("Bottom", "Slightly higher", "Higher"); private val POS_V = listOf(0, 40, 90)
+private val TL_N = listOf("English", "Tamil", "Hindi", "Telugu", "Kannada", "Urdu", "Bengali", "Marathi", "Gujarati", "Arabic", "French", "Spanish", "German", "Japanese", "Chinese")
+private val TL_V = listOf("en", "ta", "hi", "te", "kn", "ur", "bn", "mr", "gu", "ar", "fr", "es", "de", "ja", "zh")
 
 private val ICONS = mapOf("night" to R.drawable.ic_moon, "cust" to R.drawable.ic_edit, "shuf" to R.drawable.ic_shuffle, "loop" to R.drawable.ic_repeat, "mute" to R.drawable.ic_mute, "sleep" to R.drawable.ic_timer, "afx" to R.drawable.ic_wave, "eq" to R.drawable.ic_tune, "shot" to R.drawable.ic_camera, "bg" to R.drawable.ic_headset, "rot" to R.drawable.ic_rotate, "mir" to R.drawable.ic_flip)
 
@@ -42,6 +49,9 @@ class PlayerActivity : AppCompatActivity() {
   private var hw = 0; private var locked = false; private var uiOn = true; private var loopMode = 0; private var shuffle = false; private var muted = false
   private var bg = false; private var mirror = false; private var nightOn = false; private var abA = -1L; private var abB = -1L; private var sleepOn = false; private var sleepEnd = false
   private var rotI = 0; private var aspI = 0; private var speed = 1f; private var boost = 100; private var zoom = 1f
+  private var subA: List<Subs.Cue> = emptyList(); private var subB: List<Subs.Cue> = emptyList(); private var learn = false; private var tapTr = true; private var autoTr = false; private var subOff = 0L
+  private var trFrom = 0; private var trTo = 1; private var translator: com.google.mlkit.nl.translate.Translator? = null; private var trReady = false; private val trCache = HashMap<String, String>(); private var curA = ""; private var prevSpu = -2
+  private lateinit var subBox: LinearLayout; private lateinit var subL1: TextView; private lateinit var subL2: TextView
   private var eq: MediaPlayer.Equalizer? = null; private var eqOn = false; private var eqPreset = -1
   private val scales = arrayOf(MediaPlayer.ScaleType.SURFACE_BEST_FIT, MediaPlayer.ScaleType.SURFACE_FIT_SCREEN, MediaPlayer.ScaleType.SURFACE_FILL, MediaPlayer.ScaleType.SURFACE_16_9, MediaPlayer.ScaleType.SURFACE_4_3, MediaPlayer.ScaleType.SURFACE_ORIGINAL)
   private val scaleNames = listOf("Best fit", "Crop", "Stretch", "16:9", "4:3", "Original")
@@ -61,6 +71,7 @@ class PlayerActivity : AppCompatActivity() {
     vlc = findViewById(R.id.vlc); hud = findViewById(R.id.hud); seek = findViewById(R.id.seek); top = findViewById(R.id.top); bottom = findViewById(R.id.bottom)
     qa = findViewById(R.id.qa); night = findViewById(R.id.night); panelHost = findViewById(R.id.panelHost); panel = findViewById(R.id.panel)
     bPlay = findViewById(R.id.bPlay); bDec = findViewById(R.id.bDec); bUnlock = findViewById(R.id.bUnlock)
+    subBox = findViewById(R.id.subBox); subL1 = findViewById(R.id.subL1); subL2 = findViewById(R.id.subL2); subL1.movementMethod = LinkMovementMethod.getInstance(); subL1.highlightColor = 0
     uris = intent.getStringArrayListExtra("uris") ?: listOfNotNull(intent.data?.toString())
     names = intent.getStringArrayListExtra("names") ?: uris.map { dname(it) }
     idx = intent.getIntExtra("index", 0); if (uris.isEmpty()) { finish(); return }
@@ -73,8 +84,48 @@ class PlayerActivity : AppCompatActivity() {
     b(R.id.bAr) { aspI = (aspI + 1) % scales.size; mp.videoScale = scales[aspI]; hud(scaleNames[aspI]) }; b(R.id.bPip) { pip() }
     b(R.id.bAud) { audioP() }; b(R.id.bSub) { subP() }; b(R.id.bDec) { decoderDlg() }; b(R.id.bMore) { moreP() }
     seek.setOnSeekBarChangeListener(onSeek { p, user -> if (user && mp.length > 0) mp.time = mp.length * p / 1000 })
-    vlc.setOnTouchListener { _, e -> gesture(e); true }; renderQA(); load(idx); tick()
+    vlc.setOnTouchListener { _, e -> gesture(e); true }; renderQA(); load(idx); tick(); subTick()
   }
+  // ---------- learning mode: dual subtitles + tap to translate
+  private fun cs(): java.nio.charset.Charset { val v = ENC_V[prefs.getInt("sub_enc_i", 0)]
+    return try { if (v.isEmpty()) Charsets.UTF_8 else java.nio.charset.Charset.forName(when (v) { "CP1252" -> "windows-1252"; "CP1256" -> "windows-1256"; "CP1251" -> "windows-1251"; else -> v }) } catch (e: Exception) { Charsets.UTF_8 } }
+  private fun loadOwnSub(u: Uri, first: Boolean) { try { val raw = String(contentResolver.openInputStream(u)!!.readBytes(), cs()); val l = Subs.parse(raw, if (raw.contains("Dialogue:")) "x.ass" else "x.srt")
+      if (l.isEmpty()) { hud("No subtitles found in this file"); return }
+      if (first) subA = l else subB = l; if (!learn) { learn = true; prevSpu = mp.spuTrack }; mp.spuTrack = -1; curA = ""; hud("${l.size} lines loaded"); learnP() } catch (e: Exception) { hud("Cannot read this file") } }
+  private fun subTick() {
+    if (learn) { val t = mp.time - subOff; val a = Subs.at(subA, t); val b = Subs.at(subB, t)
+      if ((a ?: "") != curA) { curA = a ?: ""; renderLine1(curA) }
+      var second = b ?: ""; if (second.isEmpty() && autoTr && curA.isNotEmpty()) { second = trCache[curA] ?: ""; if (!trCache.containsKey(curA)) translateLine(curA) }
+      subL2.text = second; subL2.visibility = if (second.isEmpty()) View.GONE else View.VISIBLE
+      subBox.visibility = if (curA.isEmpty() && second.isEmpty()) View.GONE else View.VISIBLE
+    } else subBox.visibility = View.GONE
+    h.postDelayed({ subTick() }, 150) }
+  private fun renderLine1(s: String) { if (s.isEmpty()) { subL1.text = ""; return }
+    val sp = SpannableString(s)
+    if (tapTr) Regex("\\S+").findAll(s).forEach { m -> sp.setSpan(object : ClickableSpan() { override fun onClick(w: View) { wordTap(m.value, s) }; override fun updateDrawState(ds: TextPaint) { ds.isUnderlineText = false } }, m.range.first, m.range.last + 1, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE) }
+    subL1.text = sp }
+  private fun setupTranslator(then: () -> Unit) { translator?.close(); trReady = false; trCache.clear()
+    val t = com.google.mlkit.nl.translate.Translation.getClient(com.google.mlkit.nl.translate.TranslatorOptions.Builder().setSourceLanguage(TL_V[trFrom]).setTargetLanguage(TL_V[trTo]).build()); translator = t
+    hud("Downloading language model…")
+    t.downloadModelIfNeeded(com.google.mlkit.common.model.DownloadConditions.Builder().build()).addOnSuccessListener { trReady = true; hud("Translation ready"); then() }.addOnFailureListener { hud("Model download failed. Check your internet.") } }
+  private fun translateLine(s: String) { val t = translator; if (!trReady || t == null) return; trCache[s] = ""
+    t.translate(s).addOnSuccessListener { trCache[s] = it }.addOnFailureListener { trCache.remove(s) } }
+  private fun wordTap(word: String, line: String) { val clean = word.trim { !it.isLetterOrDigit() }; if (clean.isEmpty()) return
+    val was = mp.isPlaying; mp.pause(); val t = translator
+    if (!trReady || t == null) { AlertDialog.Builder(this).setTitle(clean).setMessage("Turn on translation first: CC, Learning mode, then Auto-translate.").setPositiveButton("OK", null).setOnDismissListener { if (was) mp.play() }.show(); return }
+    fun show(w: String, l: String) { AlertDialog.Builder(this).setTitle(clean).setMessage("$w\n\n$line\n→ $l").setPositiveButton("Close", null).setOnDismissListener { if (was) mp.play() }.show() }
+    t.translate(clean).addOnSuccessListener { w -> t.translate(line).addOnSuccessListener { l -> show(w, l) }.addOnFailureListener { show(w, "") } }.addOnFailureListener { hud("Translation failed"); if (was) mp.play() } }
+  private fun chooseLang(title: String, cur: Int, cb: (Int) -> Unit) { AlertDialog.Builder(this).setTitle(title).setSingleChoiceItems(TL_N.toTypedArray(), cur) { d, w -> d.dismiss(); cb(w) }.show() }
+  private fun learnP() { openPanel("Learning mode") {
+    check("Dual subtitles / learning mode", learn) { learn = it; if (it) { prevSpu = mp.spuTrack; if (subA.isNotEmpty() || subB.isNotEmpty()) mp.spuTrack = -1 } else if (prevSpu != -2) mp.spuTrack = prevSpu }
+    item("📂  First subtitle file  ·  ${if (subA.isEmpty()) "none" else "${subA.size} lines"}") { pick(11) }
+    item("📂  Second subtitle file  ·  ${if (subB.isEmpty()) "none" else "${subB.size} lines"}") { pick(12) }
+    item("Translate from  ·  ${TL_N[trFrom]}") { chooseLang("Translate from", trFrom) { trFrom = it; if (autoTr || translator != null) setupTranslator { }; learnP() } }
+    item("Translate to  ·  ${TL_N[trTo]}") { chooseLang("Translate to", trTo) { trTo = it; if (autoTr || translator != null) setupTranslator { }; learnP() } }
+    check("Auto-translate each line (shown below)", autoTr) { autoTr = it; if (it && !trReady) setupTranslator { } }
+    check("Tap a word to translate", tapTr) { tapTr = it; renderLine1(curA); if (it && !trReady && translator == null) setupTranslator { } }
+    stepper("Subtitle delay", { "$subOff ms" }) { d -> subOff += d * 100L }
+    item("Load a subtitle file first. Needs internet once per language pair to download a small model. Subtitles built into the video file cannot be tapped.", 12f) } }
   private fun dname(s: String): String { val u = Uri.parse(s)
     if (u.scheme == "content") try { contentResolver.query(u, arrayOf(android.provider.OpenableColumns.DISPLAY_NAME), null, null, null)?.use { if (it.moveToFirst()) it.getString(0)?.let { n -> return n } } } catch (_: Exception) {}
     return u.lastPathSegment?.substringAfterLast('/') ?: "Video" }
@@ -100,7 +151,7 @@ class PlayerActivity : AppCompatActivity() {
   private fun onSeek(f: (Int, Boolean) -> Unit) = object : SeekBar.OnSeekBarChangeListener { override fun onProgressChanged(s: SeekBar, p: Int, u: Boolean) = f(p, u); override fun onStartTrackingTouch(s: SeekBar) {}; override fun onStopTrackingTouch(s: SeekBar) {} }
   private fun fmt(ms: Long) = if (ms >= 3600000) "%d:%02d:%02d".format(ms / 3600000, ms / 60000 % 60, ms / 1000 % 60) else "%02d:%02d".format(ms / 60000, ms / 1000 % 60)
   private fun hud(t: String) { hud.text = t; hud.visibility = View.VISIBLE; h.removeCallbacks(hideHud); h.postDelayed(hideHud, 800) }
-  private fun showUi(on: Boolean) { uiOn = on; val v = if (on) View.VISIBLE else View.GONE; top.visibility = v; bottom.visibility = v }
+  private fun showUi(on: Boolean) { if (::subBox.isInitialized) { (subBox.layoutParams as FrameLayout.LayoutParams).bottomMargin = dp(if (on) 124 else 28); subBox.requestLayout() }; uiOn = on; val v = if (on) View.VISIBLE else View.GONE; top.visibility = v; bottom.visibility = v }
   private fun gp(k: String) = prefs.getBoolean(k, true)
   private fun wake() { if (locked) return; showUi(true); h.removeCallbacks(hideUi); h.postDelayed(hideUi, 4000) }
 
@@ -160,7 +211,7 @@ class PlayerActivity : AppCompatActivity() {
     QA("mir", "⇋", "Mirror Mode", { mirror = !mirror; vlc.scaleX = zoom * (if (mirror) -1 else 1) }, { mirror }))
   private fun renderQA() { qa.removeAllViews(); val on = prefs.getStringSet("qa", null) ?: qaList().map { it.id }.filter { it != "mir" }.toSet()
     qaList().filter { it.id in on }.forEach { q -> val c = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; gravity = Gravity.CENTER; setPadding(14, 6, 14, 6); minimumWidth = 180 }
-      val col = if (q.on()) 0xFF5AAEFF.toInt() else -1
+      val col = if (q.on()) T.accent(this@PlayerActivity) else -1
       val ic = ICONS[q.id]; if (ic != null) c.addView(ImageView(this).apply { setImageResource(ic); setColorFilter(col); layoutParams = LinearLayout.LayoutParams(dp(30), dp(30)) }) else c.addView(TextView(this).apply { text = if (q.id == "spd") "${speed}X" else q.icon; textSize = 22f; setTextColor(col); gravity = Gravity.CENTER })
       c.addView(TextView(this).apply { text = q.label; textSize = 10f; setTextColor(col); gravity = Gravity.CENTER })
       c.setOnClickListener { q.act(); renderQA(); wake() }; qa.addView(c) } }
@@ -178,14 +229,14 @@ class PlayerActivity : AppCompatActivity() {
     addView(SeekBar(this@PlayerActivity).apply { this.max = max - min; progress = cur - min; setOnSeekBarChangeListener(onSeek { p, u -> if (u) cb(p + min) }) }) }
   private fun pick(code: Int) = startActivityForResult(Intent(Intent.ACTION_OPEN_DOCUMENT).setType("*/*").addCategory(Intent.CATEGORY_OPENABLE), code)
   override fun onActivityResult(r: Int, c: Int, d: Intent?) { val u = d?.data ?: return; try { contentResolver.takePersistableUriPermission(u, 1) } catch (_: Exception) {}
-    if (r == 7) { mp.addSlave(IMedia.Slave.Type.Subtitle, u, true); hud("Subtitle loaded") } else if (r == 8) { mp.addSlave(IMedia.Slave.Type.Audio, u, true); hud("Audio loaded") } }
+    if (r == 7) { mp.addSlave(IMedia.Slave.Type.Subtitle, u, true); hud("Subtitle loaded") } else if (r == 8) { mp.addSlave(IMedia.Slave.Type.Audio, u, true); hud("Audio loaded") } else if (r == 11 || r == 12) loadOwnSub(u, r == 11) }
 
   // ---------- panels
   private fun audioP() { val tr = mp.audioTracks?.toList() ?: emptyList()
     openPanel("Audio Track") { radios(tr.map { it.name }, tr.indexOfFirst { it.id == mp.audioTrack }) { mp.audioTrack = tr[it].id }
       item("Open…") { pick(8) }; stepper("Audio delay", { "${mp.audioDelay / 1000} ms" }) { mp.audioDelay += it * 50000L } } }
   private fun subP() { val tr = mp.spuTracks?.toList() ?: emptyList()
-    openPanel("Subtitle") { item("📂  Open…") { pick(7) }; item("⚙  Subtitle settings") { subSetP() }; radios(tr.map { it.name }, tr.indexOfFirst { it.id == mp.spuTrack }) { mp.spuTrack = tr[it].id }
+    openPanel("Subtitle") { item("📂  Open…") { pick(7) }; item("⚙  Subtitle settings") { subSetP() }; item("🎓  Learning mode: dual subtitles, tap to translate") { learnP() }; radios(tr.map { it.name }, tr.indexOfFirst { it.id == mp.spuTrack }) { mp.spuTrack = tr[it].id }
       stepper("Subtitle delay", { "${mp.spuDelay / 1000} ms" }) { mp.spuDelay += it * 500000L } } }
   private fun applyEq() { try { mp.setEqualizer(if (eqOn) eq else null) } catch (_: Throwable) {} }
   private fun eqP() { if (eq == null) eq = MediaPlayer.Equalizer.create()
@@ -211,7 +262,7 @@ class PlayerActivity : AppCompatActivity() {
     item("🔖  Bookmark") { bmP() }; item("☰  Information") { infoP() }; item("➦  Share") { share() }
     item("⟲  Screen rotation: ${orientNames[rotI]}") { rotI = (rotI + 1) % orients.size; requestedOrientation = orients[rotI]; moreP() }
     item("✎  Customise shortcuts") { custP() } } }
-  private fun queueP() { openPanel("Playing Queue") { uris.indices.forEach { i -> item("${i + 1}. ${names.getOrElse(i) { "" }}") { load(i); panelHost.visibility = View.GONE }.also { if (i == idx) it.setTextColor(0xFF5AAEFF.toInt()) } } } }
+  private fun queueP() { openPanel("Playing Queue") { uris.indices.forEach { i -> item("${i + 1}. ${names.getOrElse(i) { "" }}") { load(i); panelHost.visibility = View.GONE }.also { if (i == idx) it.setTextColor(T.accent(this@PlayerActivity)) } } } }
   private fun bmP() { val k = "bm:" + uris[idx]; val l = (prefs.getString(k, "") ?: "").split(",").filter { it.isNotBlank() }.map { it.toLong() }.toMutableList()
     openPanel("Bookmark") { item("＋  Add at ${fmt(mp.time)}") { l += mp.time; prefs.edit().putString(k, l.joinToString(",")).apply(); bmP() }; l.forEach { t -> item("🔖  ${fmt(t)}") { mp.time = t; panelHost.visibility = View.GONE } } } }
   private fun infoP() { openPanel("Information") { item(names.getOrElse(idx) { "" }, 14f); val t = try { mp.currentVideoTrack } catch (_: Throwable) { null }
@@ -225,5 +276,5 @@ class PlayerActivity : AppCompatActivity() {
   override fun onUserLeaveHint() { if (mp.isPlaying) pip() }
   override fun onBackPressed() { if (panelHost.visibility == View.VISIBLE) panelHost.visibility = View.GONE else super.onBackPressed() }
   override fun onStop() { super.onStop(); prefs.edit().putLong("pos:" + uris[idx], mp.time).apply(); val inPip = Build.VERSION.SDK_INT >= 24 && isInPictureInPictureMode; if (!bg && !inPip) mp.pause() }
-  override fun onDestroy() { super.onDestroy(); h.removeCallbacksAndMessages(null); try { pfd?.close() } catch (_: Exception) {}; mp.stop(); mp.detachViews(); mp.release(); lib.release() }
+  override fun onDestroy() { super.onDestroy(); translator?.close(); h.removeCallbacksAndMessages(null); try { pfd?.close() } catch (_: Exception) {}; mp.stop(); mp.detachViews(); mp.release(); lib.release() }
 }

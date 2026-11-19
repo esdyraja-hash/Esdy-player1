@@ -25,14 +25,14 @@ class NetworkActivity : AppCompatActivity() {
   private fun dp(x: Int) = (x * resources.displayMetrics.density).toInt()
 
   override fun onCreate(b: Bundle?) { super.onCreate(b)
-    val root = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setBackgroundColor(0xFFF4F7FC.toInt()); setPadding(0, dp(30), 0, 0) }
-    head = TextView(this).apply { textSize = 22f; setTextColor(0xFF1B1F3B.toInt()); setPadding(dp(18), dp(12), dp(18), dp(12)); setOnClickListener { onBackPressed() } }
+    val root = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setBackgroundColor(T.bg(this@NetworkActivity)); setPadding(0, dp(30), 0, 0) }
+    head = TextView(this).apply { textSize = 22f; setTextColor(T.text(this@NetworkActivity)); setPadding(dp(18), dp(12), dp(18), dp(12)); setOnClickListener { onBackPressed() } }
     lv = ListView(this); root.addView(head); root.addView(lv, LinearLayout.LayoutParams(-1, -1)); setContentView(root)
     lib = LibVLC(this, arrayListOf("--no-drop-late-frames")); showServers()
   }
   private fun servers(): JSONArray = try { JSONArray(prefs.getString("servers", "[]")) } catch (e: Exception) { JSONArray() }
   private fun labeled(l: List<String>) = object : ArrayAdapter<String>(this@NetworkActivity, android.R.layout.simple_list_item_1, l) {
-    override fun getView(p: Int, v: View?, g: ViewGroup): View { val t = super.getView(p, v, g) as TextView; t.setTextColor(0xFF1B1F3B.toInt()); t.textSize = 16f; t.setPadding(dp(18), dp(14), dp(18), dp(14)); return t } }
+    override fun getView(p: Int, v: View?, g: ViewGroup): View { val t = super.getView(p, v, g) as TextView; t.setTextColor(T.text(this@NetworkActivity)); t.textSize = 16f; t.setPadding(dp(18), dp(14), dp(18), dp(14)); return t } }
   private fun showServers() { inServers = true; stack.clear(); browser?.release(); browser = null; head.text = "←   Network"
     val a = servers(); val labels = mutableListOf("＋  Add server (SMB / FTP)", "▶  Play a stream URL"); for (i in 0 until a.length()) labels.add("🖧  " + a.getJSONObject(i).getString("n"))
     lv.adapter = labeled(labels)
