@@ -82,10 +82,22 @@ class PlayerActivity : AppCompatActivity() {
     b(R.id.bPrev) { if (mp.time > 5000 || idx == 0) mp.time = 0 else load(idx - 1) }; b(R.id.bNext) { if (idx < uris.size - 1) load(idx + 1) }
     b(R.id.bLock) { locked = true; showUi(false); bUnlock.visibility = View.VISIBLE }; b(R.id.bUnlock) { locked = false; bUnlock.visibility = View.GONE; showUi(true) }
     b(R.id.bAr) { aspI = (aspI + 1) % scales.size; mp.videoScale = scales[aspI]; hud(scaleNames[aspI]) }; b(R.id.bPip) { pip() }
-    b(R.id.bAud) { audioP() }; b(R.id.bSub) { subP() }; b(R.id.bDec) { decoderDlg() }; b(R.id.bMore) { moreP() }
+    b(R.id.bCast) { castP() }; b(R.id.bAud) { audioP() }; b(R.id.bSub) { subP() }; b(R.id.bDec) { decoderDlg() }; b(R.id.bMore) { moreP() }
     seek.setOnSeekBarChangeListener(onSeek { p, user -> if (user && mp.length > 0) mp.time = mp.length * p / 1000 })
     vlc.setOnTouchListener { _, e -> gesture(e); true }; renderQA(); load(idx); tick(); subTick()
   }
+  // ---------- casting (Chromecast and other renderers found by LibVLC)
+  private val renderers = ArrayList<RendererItem>(); private val discoverers = ArrayList<RendererDiscoverer>()
+  private fun castP() {
+    if (discoverers.isEmpty()) { hud("Searching for cast devices…")
+      val list = RendererDiscoverer.list(lib) ?: arrayOf()
+      for (d in list) { val rd = RendererDiscoverer(lib, d.name)
+        rd.setEventListener { e -> when (e.type) { RendererDiscoverer.Event.ItemAdded -> runOnUiThread { renderers.add(e.item) }; RendererDiscoverer.Event.ItemDeleted -> runOnUiThread { renderers.remove(e.item) } } }
+        rd.start(); discoverers.add(rd) } }
+    h.postDelayed({ showCastList() }, if (renderers.isEmpty()) 3000L else 0L) }
+  private fun showCastList() { val names = listOf("📱  This phone") + renderers.map { "📺  " + it.displayName }
+    AlertDialog.Builder(this).setTitle(if (renderers.isEmpty()) "No cast devices found (same Wi-Fi?)" else "Cast to").setItems(names.toTypedArray()) { _, i ->
+      prefs.edit().putLong("pos:" + uris[idx], mp.time).apply(); mp.setRenderer(if (i == 0) null else renderers[i - 1]); load(idx); hud(if (i == 0) "Playing on this phone" else "Casting to " + renderers[i - 1].displayName) }.show() }
   // ---------- learning mode: dual subtitles + tap to translate
   private fun cs(): java.nio.charset.Charset { val v = ENC_V[prefs.getInt("sub_enc_i", 0)]
     return try { if (v.isEmpty()) Charsets.UTF_8 else java.nio.charset.Charset.forName(when (v) { "CP1252" -> "windows-1252"; "CP1256" -> "windows-1256"; "CP1251" -> "windows-1251"; else -> v }) } catch (e: Exception) { Charsets.UTF_8 } }
@@ -161,13 +173,13 @@ class PlayerActivity : AppCompatActivity() {
     try { pfd?.close() } catch (_: Exception) {}; pfd = null
     val m = if (u.scheme == "content") { pfd = contentResolver.openFileDescriptor(u, "r"); Media(lib, pfd!!.fileDescriptor) } else Media(lib, u)
     when (hw) { 0 -> m.setHWDecoderEnabled(true, false); 1 -> m.setHWDecoderEnabled(true, true); else -> m.setHWDecoderEnabled(false, false) }
-    ENC_V[prefs.getInt("sub_enc_i", 0)].takeIf { it.isNotEmpty() }?.let { m.addOption(":subsdec-encoding=$it") }; LANG_V[prefs.getInt("sub_lang_i", 0)].takeIf { it.isNotEmpty() }?.let { m.addOption(":sub-language=$it") }; mp.media = m; m.release(); mp.rate = speed; mp.volume = if (muted) 0 else boost; mp.play(); abA = -1; abB = -1; h.postDelayed({ mp.spuDelay = prefs.getInt("sub_sync", 0) * 1000L }, 1500)
+    ENC_V[prefs.getInt("sub_enc_i", 0)].takeIf { it.isNotEmpty() }?.let { m.addOption(":subsdec-encoding=$it") }; LANG_V[prefs.getInt("sub_lang_i", 0)].takeIf { it.isNotEmpty() }?.let { m.addOption(":sub-language=$it") }; if (u.scheme == "http" || u.scheme == "https") m.addOption(":network-caching=1500"); mp.media = m; m.release(); mp.rate = speed; mp.volume = if (muted) 0 else boost; mp.play(); abA = -1; abB = -1; h.postDelayed({ mp.spuDelay = prefs.getInt("sub_sync", 0) * 1000L }, 1500)
     val p = prefs.getLong("pos:" + uris[i], 0); if (p > 5000 && prefs.getBoolean("resume", true)) h.postDelayed({ mp.time = p; hud("Resumed ${fmt(p)}") }, 900)
     applyEq()
   }
   private fun decoderDlg() { AlertDialog.Builder(this).setTitle("Select decoder").setSingleChoiceItems(arrayOf("HW decoder", "HW+ decoder", "SW decoder"), hw) { d, w ->
     hw = w; bDec.text = arrayOf("HW", "HW+", "SW")[w]; val t = mp.time; prefs.edit().putLong("pos:" + uris[idx], t).apply(); load(idx); d.dismiss() }.show() }
-  private fun onEnd() { prefs.edit().remove("pos:" + uris[idx]).apply()
+  private fun onEnd() { if (mp.length <= 0L) { hud("Stream ended or lost"); return }; prefs.edit().remove("pos:" + uris[idx]).apply()
     when { sleepEnd -> finish(); loopMode == 1 -> load(idx); shuffle && uris.size > 1 -> load(Random.nextInt(uris.size)); idx < uris.size - 1 -> load(idx + 1); loopMode == 2 -> load(0); else -> finish() } }
   private fun tick() {
     if (mp.length > 0) { seek.progress = (mp.time * 1000 / mp.length).toInt(); findViewById<TextView>(R.id.tCur).text = fmt(mp.time); findViewById<TextView>(R.id.tDur).text = fmt(mp.length) }
@@ -276,5 +288,5 @@ class PlayerActivity : AppCompatActivity() {
   override fun onUserLeaveHint() { if (mp.isPlaying) pip() }
   override fun onBackPressed() { if (panelHost.visibility == View.VISIBLE) panelHost.visibility = View.GONE else super.onBackPressed() }
   override fun onStop() { super.onStop(); prefs.edit().putLong("pos:" + uris[idx], mp.time).apply(); val inPip = Build.VERSION.SDK_INT >= 24 && isInPictureInPictureMode; if (!bg && !inPip) mp.pause() }
-  override fun onDestroy() { super.onDestroy(); translator?.close(); h.removeCallbacksAndMessages(null); try { pfd?.close() } catch (_: Exception) {}; mp.stop(); mp.detachViews(); mp.release(); lib.release() }
+  override fun onDestroy() { super.onDestroy(); translator?.close(); discoverers.forEach { try { it.stop(); it.release() } catch (_: Throwable) {} }; h.removeCallbacksAndMessages(null); try { pfd?.close() } catch (_: Exception) {}; mp.stop(); mp.detachViews(); mp.release(); lib.release() }
 }

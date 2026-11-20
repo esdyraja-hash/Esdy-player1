@@ -9,6 +9,7 @@
   <application android:icon="@mipmap/ic_launcher" android:roundIcon="@mipmap/ic_launcher_round" android:label="ESDY HQ Media Player" android:usesCleartextTraffic="true" android:theme="@style/Theme.AppCompat.NoActionBar">
     <service android:name=".MusicService" android:exported="false" android:foregroundServiceType="mediaPlayback"/>
     <activity android:name=".MusicActivity" android:exported="false" android:screenOrientation="portrait"/>
+    <activity android:name=".IptvActivity" android:exported="false"/>
     <activity android:name=".NetworkActivity" android:exported="false"/>
     <activity android:name=".SettingsActivity" android:exported="false"/>
     <activity android:name=".HomeActivity" android:exported="true">

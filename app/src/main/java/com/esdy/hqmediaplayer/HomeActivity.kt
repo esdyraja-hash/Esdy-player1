@@ -52,7 +52,7 @@ class HomeActivity : AppCompatActivity() {
     chip("🎵", "Music") { tab = 1; folder = null; render() }; chip("📂", "Browse") { startActivityForResult(Intent(Intent.ACTION_OPEN_DOCUMENT).setType("video/*").addCategory(Intent.CATEGORY_OPENABLE), 1) }
     chip("🌐", "Network") { val et = EditText(this); et.hint = "https://…/video.mkv"
       AlertDialog.Builder(this).setTitle("Play network stream").setView(et).setPositiveButton("Play") { _, _ -> startActivity(Intent(this, PlayerActivity::class.java).setData(Uri.parse(et.text.toString().trim()))) }.show() }
-    chip("⏯", "Resume") { fab.performClick() }; chip("🕘", "Recent") { recentDlg() }; chip("🖧", "LAN") { startActivity(Intent(this, NetworkActivity::class.java)) }; chip("⬇", "Download") { downloadDlg() }
+    chip("⏯", "Resume") { fab.performClick() }; chip("🕘", "Recent") { recentDlg() }; chip("🖧", "LAN") { startActivity(Intent(this, NetworkActivity::class.java)) }; chip("📺", "TV") { startActivity(Intent(this, IptvActivity::class.java)) }; chip("⬇", "Download") { downloadDlg() }
     gate { start() }
   }
   private fun gate(f: () -> Unit) { val pin = prefs.getString("pin", null); if (pin == null || unlocked) { f(); return }

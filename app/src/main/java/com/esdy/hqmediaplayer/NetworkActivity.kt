@@ -34,11 +34,11 @@ class NetworkActivity : AppCompatActivity() {
   private fun labeled(l: List<String>) = object : ArrayAdapter<String>(this@NetworkActivity, android.R.layout.simple_list_item_1, l) {
     override fun getView(p: Int, v: View?, g: ViewGroup): View { val t = super.getView(p, v, g) as TextView; t.setTextColor(T.text(this@NetworkActivity)); t.textSize = 16f; t.setPadding(dp(18), dp(14), dp(18), dp(14)); return t } }
   private fun showServers() { inServers = true; stack.clear(); browser?.release(); browser = null; head.text = "←   Network"
-    val a = servers(); val labels = mutableListOf("＋  Add server (SMB / FTP)", "▶  Play a stream URL"); for (i in 0 until a.length()) labels.add("🖧  " + a.getJSONObject(i).getString("n"))
+    val a = servers(); val labels = mutableListOf("＋  Add server (SMB / FTP)", "▶  Play a stream URL", "🔍  Find devices on Wi-Fi (DLNA / shares)"); for (i in 0 until a.length()) labels.add("🖧  " + a.getJSONObject(i).getString("n"))
     lv.adapter = labeled(labels)
-    lv.setOnItemClickListener { _, _, i, _ -> when (i) { 0 -> addServer(); 1 -> urlDlg(); else -> browse(a.getJSONObject(i - 2).getString("u")) } }
-    lv.setOnItemLongClickListener { _, _, i, _ -> if (i >= 2) AlertDialog.Builder(this).setTitle("Remove this server?").setPositiveButton("Remove") { _, _ ->
-      val na = JSONArray(); for (k in 0 until a.length()) if (k != i - 2) na.put(a.getJSONObject(k)); prefs.edit().putString("servers", na.toString()).apply(); showServers() }.setNegativeButton("Cancel", null).show(); true }
+    lv.setOnItemClickListener { _, _, i, _ -> when (i) { 0 -> addServer(); 1 -> urlDlg(); 2 -> discover(); else -> browse(a.getJSONObject(i - 3).getString("u")) } }
+    lv.setOnItemLongClickListener { _, _, i, _ -> if (i >= 3) AlertDialog.Builder(this).setTitle("Remove this server?").setPositiveButton("Remove") { _, _ ->
+      val na = JSONArray(); for (k in 0 until a.length()) if (k != i - 3) na.put(a.getJSONObject(k)); prefs.edit().putString("servers", na.toString()).apply(); showServers() }.setNegativeButton("Cancel", null).show(); true }
   }
   private fun browse(uri: String) { inServers = false; if (stack.isEmpty() || stack.last() != uri) stack.add(uri)
     val u = Uri.parse(uri); head.text = "←   " + (u.lastPathSegment ?: u.host ?: "Network"); items.clear(); show(); browser?.release()
@@ -49,6 +49,14 @@ class NetworkActivity : AppCompatActivity() {
       override fun onBrowseEnd() { if (items.isEmpty()) Toast.makeText(this@NetworkActivity, "Nothing here, or cannot connect", Toast.LENGTH_LONG).show() } }, ui)
     browser!!.browse(u, 0)
   }
+  private fun discover() { inServers = false; stack.clear(); stack.add("discover://"); head.text = "←   Devices on Wi-Fi"; items.clear(); show(); browser?.release()
+    Toast.makeText(this, "Searching… this can take a few seconds", Toast.LENGTH_LONG).show()
+    browser = MediaBrowser(lib, object : MediaBrowser.EventListener {
+      override fun onMediaAdded(index: Int, media: IMedia) { items.add(Item(media.uri.toString(), media.getMeta(IMedia.Meta.Title) ?: media.uri.host ?: "Device", media.type == IMedia.Type.Directory))
+        items.sortWith(compareBy({ !it.dir }, { it.name.lowercase() })); show() }
+      override fun onMediaRemoved(index: Int, media: IMedia) {}
+      override fun onBrowseEnd() {} }, ui)
+    browser!!.discoverNetworkShares() }
   private fun show() { lv.adapter = labeled(items.map { (if (it.dir) "📁  " else "🎬  ") + it.name })
     lv.setOnItemClickListener { _, _, i, _ -> val x = items[i]; if (x.dir) browse(x.uri) else play(i) }; lv.setOnItemLongClickListener { _, _, _, _ -> true } }
   private fun play(i: Int) { val files = items.withIndex().filter { !it.value.dir }; val idx = files.indexOfFirst { it.index == i }
@@ -65,6 +73,6 @@ class NetworkActivity : AppCompatActivity() {
       } else Toast.makeText(this, "The address must start with smb:// or ftp://", Toast.LENGTH_LONG).show() }.setNegativeButton("Cancel", null).show() }
   private fun urlDlg() { val et = EditText(this); et.hint = "https://…/video.mkv"
     AlertDialog.Builder(this).setTitle("Play a stream URL").setView(et).setPositiveButton("Play") { _, _ -> startActivity(Intent(this, PlayerActivity::class.java).setData(Uri.parse(et.text.toString().trim()))) }.setNegativeButton("Cancel", null).show() }
-  override fun onBackPressed() { if (inServers) { super.onBackPressed(); return }; stack.removeLastOrNull(); val prev = stack.lastOrNull(); if (prev == null) showServers() else browse(prev) }
+  override fun onBackPressed() { if (inServers) { super.onBackPressed(); return }; stack.removeLastOrNull(); val prev = stack.lastOrNull(); if (prev == null) showServers() else if (prev == "discover://") discover() else browse(prev) }
   override fun onDestroy() { super.onDestroy(); browser?.release(); lib.release() }
 }
